@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import BackButton from '../components/ui/Backbutton';
 
 const Category = () => {
   const { id } = useParams();
   const [products, setProducts] = useState([]);
   const [categoryName, setCategoryName] = useState('');
-  const navigate = useNavigate(); // New: Use navigate hook
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -29,14 +29,7 @@ const Category = () => {
     <div className="container mx-auto py-16">
       <h1 className="text-4xl font-bold text-center mb-8">{categoryName}</h1>
 
-      {/* Back Button */}
-      <button 
-  onClick={() => navigate(-1)} 
-  className="inline-block text-gray-700 hover:text-gray-900 bg-gray-200 hover:bg-gray-300 rounded-md px-4 py-2 mb-4"
->
-  ← Back
-</button>
-
+      <BackButton className="mb-4" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {products.map(product => (

@@ -23,11 +23,10 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      const userId = localStorage.getItem('userId'); // Assuming you store the logged-in user's ID
+      const userId = localStorage.getItem('userId');
       const total = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
       const status = 'Pending';
 
-      // Step 1: Create Order and Order Items
       const orderResponse = await fetch('http://localhost:5000/api/orders', {
         method: 'POST',
         headers: {
@@ -49,10 +48,8 @@ const Checkout = () => {
       const orderData = await orderResponse.json();
       const orderId = orderData.orderId;
 
-      // Step 2: Create Payment
       await createPayment(orderId, paymentMethod, 'Pending');
 
-      // Step 3: Success Notification and Redirect
       alert('Order placed successfully!');
       setCartItems([]); // Clear the cart
       navigate('/products');

@@ -4,12 +4,12 @@ const db = require('../db');
 
 // CREATE Product
 router.post('/products', (req, res) => {
-  const { name, description, price, stock, category_id, image_url } = req.body;
+  const { name, description, price, stock, category_id, image_url, isFeatured } = req.body;
   const query = `
-    INSERT INTO products (name, description, price, stock, category_id, image_url) 
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO products (name, description, price, stock, category_id, image_url, isFeatured) 
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
-  db.query(query, [name, description, price, stock, category_id, image_url], (err, result) => {
+  db.query(query, [name, description, price, stock, category_id, image_url, isFeatured || false], (err, result) => {
     if (err) return res.status(500).send(err);
     res.status(201).send({ id: result.insertId, message: 'Product created' });
   });
@@ -25,10 +25,34 @@ router.get('/products', (req, res) => {
       p.price, 
       p.stock, 
       p.image_url, 
+      p.isFeatured, 
       c.name AS category_name 
     FROM products p
     INNER JOIN categories c ON p.category_id = c.id
     ORDER BY c.name ASC, p.name ASC
+  `;
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).send(err);
+    res.status(200).json(results);
+  });
+});
+
+// READ Featured Products
+router.get('/products/featured', (req, res) => {
+  const query = `
+    SELECT 
+      p.id, 
+      p.name, 
+      p.description, 
+      p.price, 
+      p.stock, 
+      p.image_url, 
+      p.isFeatured, 
+      c.name AS category_name 
+    FROM products p
+    INNER JOIN categories c ON p.category_id = c.id
+    WHERE p.isFeatured = 1
+    ORDER BY p.name ASC
   `;
   db.query(query, (err, results) => {
     if (err) return res.status(500).send(err);
@@ -69,13 +93,13 @@ router.get('/products/:id', (req, res) => {
 
 // UPDATE Product
 router.put('/products/:id', (req, res) => {
-  const { name, description, price, stock, category_id, image_url } = req.body;
+  const { name, description, price, stock, category_id, image_url, isFeatured } = req.body;
   const query = `
     UPDATE products 
-    SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, image_url = ? 
+    SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, image_url = ?, isFeatured = ? 
     WHERE id = ?
   `;
-  db.query(query, [name, description, price, stock, category_id, image_url, req.params.id], (err, result) => {
+  db.query(query, [name, description, price, stock, category_id, image_url, isFeatured || false, req.params.id], (err, result) => {
     if (err) return res.status(500).send(err);
     if (result.affectedRows === 0) return res.status(404).send('Product not found');
     res.status(200).send('Product updated');

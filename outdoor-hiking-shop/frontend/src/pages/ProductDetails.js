@@ -1,23 +1,57 @@
+// src/pages/ProductDetails.js
+
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import BackButton from '../components/ui/Backbutton';
+import ReviewList from '../components/ui/ReviewList';
+import ReviewFormModal from '../components/ui/ReviewFormModal';
 
 const ProductDetails = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const { addToCart } = useCart();
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/products/${id}`)
-      .then(res => res.json())
-      .then(data => setProduct(data))
-      .catch(err => console.error(err));
+    const fetchProduct = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/products/${id}`);
+        const data = await res.json();
+        setProduct(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/reviews/product/${id}`);
+        const data = await res.json();
+        setReviews(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchProduct();
+    fetchReviews();
   }, [id]);
+
+  // Refresh reviews after submitting
+  const refreshReviews = () => {
+    fetch(`http://localhost:5000/api/reviews/product/${id}`)
+      .then(res => res.json())
+      .then(data => setReviews(data))
+      .catch(err => console.error(err));
+  };
 
   if (!product) return <div>Loading...</div>;
 
   return (
     <div className="container mx-auto py-16">
+      <BackButton className="mb-4" />
+
       <div className="flex items-center">
         <img src={product.image_url} alt={product.name} className="w-1/2 object-cover rounded-md" />
         <div className="ml-8">
@@ -33,16 +67,14 @@ const ProductDetails = () => {
           >
             Add to Cart
           </button>
-          <div className="mt-4">
-          <Link 
-  to="/products" 
-  className="inline-block text-gray-700 hover:text-gray-900 bg-gray-200 hover:bg-gray-300 rounded-md px-4 py-2 mb-4"
->
-  ← Back to Products
-</Link>
-          </div>
         </div>
       </div>
+
+      {/* Customer Reviews */}
+      <ReviewList reviews={reviews} />
+
+      {/* Write a Review as Modal */}
+      <ReviewFormModal productId={id} onReviewSubmit={refreshReviews} />
     </div>
   );
 };

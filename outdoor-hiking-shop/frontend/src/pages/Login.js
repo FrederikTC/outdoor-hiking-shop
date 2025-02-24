@@ -14,8 +14,12 @@ const Login = () => {
         email,
         password,
       });
+
+      // Store user ID and token
       localStorage.setItem('token', res.data.token);
-      navigate('/checkout');
+      localStorage.setItem('user_id', res.data.user_id); // Store user ID
+
+      navigate('/'); // Redirect to homepage
     } catch (error) {
       alert('Login failed');
     }

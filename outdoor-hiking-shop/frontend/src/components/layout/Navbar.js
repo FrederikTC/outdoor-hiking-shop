@@ -27,23 +27,34 @@ const Navbar = () => {
               Cart
             </Link>
           </li>
-          <li>
-            {isAuthenticated ? (
-              <button
-                onClick={handleLogout}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Logout
-              </button>
-            ) : (
-              <Link
-                to="/login"
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-              >
-                Login
-              </Link>
-            )}
-          </li>
+          {isAuthenticated ? (
+            <>
+              <li>
+                <Link to="/checkout" className="hover:text-gray-400">
+                  Checkout
+                </Link>
+              </li>
+              <li>
+                <button
+                  onClick={handleLogout}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Logout
+                </button>
+              </li>
+            </>
+          ) : (
+            <>
+              <li>
+                <Link
+                  to="/login"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+                >
+                  Login
+                </Link>
+              </li>
+            </>
+          )}
         </ul>
       </div>
     </nav>
