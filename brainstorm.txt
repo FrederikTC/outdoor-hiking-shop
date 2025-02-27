@@ -1,0 +1,30 @@
+cmds.
+MySQL:
+
+mysql -u root -p
+SHOW DATABASES;
+USE outdoor_hiking_shop;
+SHOW TABLES;
+SELECT * FROM products;
+
+Mongosh:
+Mongosh
+show dbs;
+use outdoorshop
+show collections
+
+db.products.insertOne({
+...   name: "Test Product",
+...   description: "This is a test product.",
+...   price: 19.99,
+...   stock: 100,
+...   imageUrl: "https://example.com/image.jpg",
+...   isFeatured: true
+... })
+
+db.products.find()
+
+
+
+node scripts/importToMongo.js
+
