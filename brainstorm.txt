@@ -24,6 +24,20 @@ db.products.insertOne({
 
 db.products.find()
 
+db.users.find().pretty();
+db.addresses.find().pretty();
+db.products.find().pretty();
+db.carts.find().pretty();
+db.orders.find().pretty();
+db.orderitems.find().pretty();
+db.payments.find().pretty();
+db.coupons.find().pretty();
+db.inventorylogs.find().pretty();
+db.reviews.find().pretty();
+db.shippingmethods.find().pretty();
+
+
+
 
 
 node scripts/importToMongo.js

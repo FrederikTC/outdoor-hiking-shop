@@ -12,9 +12,9 @@ const UserSchema = new mongoose.Schema({
     maxlength: 30,
     validate: {
       validator: function(v) {
-        return /^[a-zA-Z0-9_]+$/.test(v);
+        return /^[a-zA-Z0-9._]+$/.test(v); // Allow letters, numbers, underscores, and dots
       },
-      message: 'Username can only contain letters, numbers, and underscores'
+      message: 'Username can only contain letters, numbers, underscores, and dots'
     }
   },
   email: { 
@@ -34,7 +34,7 @@ const UserSchema = new mongoose.Schema({
   password: { 
     type: String, 
     required: true, 
-    minlength: 8,
+    minlength: 3,   // Enforce a minimum length of 3 characters for better security
     select: false  // Exclude password from query results by default
   },
   role: { 
