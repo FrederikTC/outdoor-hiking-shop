@@ -1,103 +1,186 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const db = require('../db'); // MySQL Connection
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const authMiddleware = require('../utils/authMiddleware'); // Importing authMiddleware
+const authMiddleware = require('../utils/authMiddleware');
 
+// =============================
 // CREATE User (Registration)
-router.post('/users', async (req, res) => {
+// =============================
+router.post('/', async (req, res) => {
   const { username, email, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
 
-  const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`;
-  db.query(query, [username, email, hashedPassword], (err, result) => {
+  // Validate required fields
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  // Check if email already exists
+  const checkQuery = `SELECT * FROM users WHERE email = ?`;
+  db.query(checkQuery, [email], async (err, results) => {
     if (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).send('Email already exists');
-      }
-      return res.status(500).send(err);
+      console.error('Database Error:', err);
+      return res.status(500).json({ message: 'Failed to register user' });
     }
-    res.status(201).send({ id: result.insertId, message: 'User created' });
+
+    if (results.length > 0) {
+      return res.status(409).json({ message: 'Email already exists' });
+    }
+
+    // Hash the password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create and save new user
+    const insertQuery = `
+      INSERT INTO users (username, email, password) 
+      VALUES (?, ?, ?)
+    `;
+    db.query(insertQuery, [username, email, hashedPassword], (err, result) => {
+      if (err) {
+        console.error('Database Error:', err);
+        return res.status(500).json({ message: 'Failed to register user' });
+      }
+      res.status(201).json({ id: result.insertId, message: 'User registered successfully' });
+    });
   });
 });
 
-// READ All Users (Admin Only - Add role check if needed)
-router.get('/users', authMiddleware, (req, res) => {
-  db.query('SELECT id, username, email, created_at FROM users', (err, results) => {
-    if (err) return res.status(500).send(err);
+// =============================
+// READ All Users (Admin Only)
+// =============================
+router.get('/', authMiddleware, (req, res) => {
+  // Only allow admin to view all users
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  const query = `SELECT id, username, email, created_at FROM users`;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ message: 'Failed to fetch users' });
+    }
     res.status(200).json(results);
   });
 });
 
+// =============================
 // READ Single User (Secured)
-router.get('/users/:id', authMiddleware, (req, res) => {
+// =============================
+router.get('/:id', authMiddleware, (req, res) => {
   // Only allow the user to view their own profile or admin to view others
-  if (req.user.id != req.params.id) {
-    return res.status(403).send('Access denied');
+  if (req.user.id != req.params.id && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
   }
 
   const query = `SELECT id, username, email, created_at FROM users WHERE id = ?`;
-  db.query(query, [req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
-    if (result.length === 0) return res.status(404).send('User not found');
-    res.status(200).json(result[0]);
+  db.query(query, [req.params.id], (err, results) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ message: 'Failed to fetch user' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(results[0]);
   });
 });
 
+// =============================
 // UPDATE User (Secured)
-router.put('/users/:id', authMiddleware, async (req, res) => {
+// =============================
+router.put('/:id', authMiddleware, async (req, res) => {
   // Only allow the user to update their own profile
   if (req.user.id != req.params.id) {
-    return res.status(403).send('Access denied');
+    return res.status(403).json({ message: 'Access denied' });
   }
 
   const { username, email, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
 
-  const query = `UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?`;
-  db.query(query, [username, email, hashedPassword, req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
-    if (result.affectedRows === 0) return res.status(404).send('User not found');
-    res.status(200).send('User updated');
-  });
-});
-
-// DELETE User (Admin Only or User's own account)
-router.delete('/users/:id', authMiddleware, (req, res) => {
-  // Only allow the user to delete their own profile
-  if (req.user.id != req.params.id) {
-    return res.status(403).send('Access denied');
+  // Validate required fields
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: 'All fields are required' });
   }
 
-  const query = `DELETE FROM users WHERE id = ?`;
-  db.query(query, [req.params.id], (err, result) => {
-    if (err) return res.status(500).send(err);
-    if (result.affectedRows === 0) return res.status(404).send('User not found');
-    res.status(200).send('User deleted');
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const updateQuery = `
+    UPDATE users 
+    SET username = ?, email = ?, password = ? 
+    WHERE id = ?
+  `;
+  db.query(updateQuery, [username, email, hashedPassword, req.params.id], (err, result) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ message: 'Failed to update user' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({ message: 'User updated successfully' });
   });
 });
 
-// LOGIN User (Authentication)
-router.post('/users/login', (req, res) => {
-  const { email, password } = req.body;
-  const query = `SELECT id, username, email, password FROM users WHERE email = ?`;
+// =============================
+// DELETE User (Admin or Own Account)
+// =============================
+router.delete('/:id', authMiddleware, (req, res) => {
+  // Only allow the user to delete their own profile or admin
+  if (req.user.id != req.params.id && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
 
+  const deleteQuery = `DELETE FROM users WHERE id = ?`;
+  db.query(deleteQuery, [req.params.id], (err, result) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ message: 'Failed to delete user' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({ message: 'User deleted successfully' });
+  });
+});
+
+// =============================
+// LOGIN User (Authentication)
+// =============================
+router.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  // Validate required fields
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
+  const query = `SELECT id, username, email, password, role FROM users WHERE email = ?`;
   db.query(query, [email], async (err, results) => {
-    if (err) return res.status(500).send(err);
-    if (results.length === 0) return res.status(401).send('Invalid credentials');
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ message: 'Failed to login' });
+    }
+    if (results.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     const user = results[0];
     const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isMatch) return res.status(401).send('Invalid credentials');
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
-    // Create JWT token
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    // Create JWT token after successful login
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
+    // Send token and user info in the response
     res.status(200).json({ token, user_id: user.id, username: user.username });
   });
 });

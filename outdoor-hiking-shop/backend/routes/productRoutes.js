@@ -1,22 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const db = require('../db'); // MySQL Connection
 
 // CREATE Product
-router.post('/products', (req, res) => {
-  const { name, description, price, stock, category_id, image_url, isFeatured } = req.body;
-  const query = `
+router.post('/', (req, res) => {
+  const { name, description, price, stock, categoryId, imageUrl, isFeatured } = req.body;
+
+  const insertQuery = `
     INSERT INTO products (name, description, price, stock, category_id, image_url, isFeatured) 
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
-  db.query(query, [name, description, price, stock, category_id, image_url, isFeatured || false], (err, result) => {
+  db.query(insertQuery, [name, description, price, stock, categoryId, imageUrl, isFeatured || false], (err, result) => {
     if (err) return res.status(500).send(err);
     res.status(201).send({ id: result.insertId, message: 'Product created' });
   });
 });
 
 // READ All Products
-router.get('/products', (req, res) => {
+router.get('/', (req, res) => {
   const query = `
     SELECT 
       p.id, 
@@ -26,10 +27,11 @@ router.get('/products', (req, res) => {
       p.stock, 
       p.image_url, 
       p.isFeatured, 
+      c.id AS category_id, 
       c.name AS category_name 
     FROM products p
     INNER JOIN categories c ON p.category_id = c.id
-    ORDER BY c.name ASC, p.name ASC
+    ORDER BY p.name ASC
   `;
   db.query(query, (err, results) => {
     if (err) return res.status(500).send(err);
@@ -38,7 +40,7 @@ router.get('/products', (req, res) => {
 });
 
 // READ Featured Products
-router.get('/products/featured', (req, res) => {
+router.get('/featured', (req, res) => {
   const query = `
     SELECT 
       p.id, 
@@ -48,6 +50,7 @@ router.get('/products/featured', (req, res) => {
       p.stock, 
       p.image_url, 
       p.isFeatured, 
+      c.id AS category_id, 
       c.name AS category_name 
     FROM products p
     INNER JOIN categories c ON p.category_id = c.id
@@ -61,8 +64,7 @@ router.get('/products/featured', (req, res) => {
 });
 
 // READ Products by Category ID
-router.get('/products/category/:id', (req, res) => {
-  const categoryId = req.params.id;
+router.get('/category/:id', (req, res) => {
   const query = `
     SELECT 
       p.id, 
@@ -75,44 +77,45 @@ router.get('/products/category/:id', (req, res) => {
     WHERE p.category_id = ?
     ORDER BY p.name ASC
   `;
-  db.query(query, [categoryId], (err, results) => {
+  db.query(query, [req.params.id], (err, results) => {
     if (err) return res.status(500).send(err);
     res.status(200).json(results);
   });
 });
 
 // READ Single Product by ID
-router.get('/products/:id', (req, res) => {
+router.get('/:id', (req, res) => {
   const query = `SELECT * FROM products WHERE id = ?`;
-  db.query(query, [req.params.id], (err, result) => {
+  db.query(query, [req.params.id], (err, results) => {
     if (err) return res.status(500).send(err);
-    if (result.length === 0) return res.status(404).send('Product not found');
-    res.status(200).json(result[0]);
+    if (results.length === 0) return res.status(404).send({ message: 'Product not found' });
+    res.status(200).json(results[0]);
   });
 });
 
 // UPDATE Product
-router.put('/products/:id', (req, res) => {
-  const { name, description, price, stock, category_id, image_url, isFeatured } = req.body;
-  const query = `
+router.put('/:id', (req, res) => {
+  const { name, description, price, stock, categoryId, imageUrl, isFeatured } = req.body;
+
+  const updateQuery = `
     UPDATE products 
     SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, image_url = ?, isFeatured = ? 
     WHERE id = ?
   `;
-  db.query(query, [name, description, price, stock, category_id, image_url, isFeatured || false, req.params.id], (err, result) => {
+  db.query(updateQuery, [name, description, price, stock, categoryId, imageUrl, isFeatured || false, req.params.id], (err, result) => {
     if (err) return res.status(500).send(err);
-    if (result.affectedRows === 0) return res.status(404).send('Product not found');
-    res.status(200).send('Product updated');
+    if (result.affectedRows === 0) return res.status(404).send({ message: 'Product not found' });
+    res.status(200).send({ message: 'Product updated' });
   });
 });
 
 // DELETE Product
-router.delete('/products/:id', (req, res) => {
+router.delete('/:id', (req, res) => {
   const query = `DELETE FROM products WHERE id = ?`;
   db.query(query, [req.params.id], (err, result) => {
     if (err) return res.status(500).send(err);
-    if (result.affectedRows === 0) return res.status(404).send('Product not found');
-    res.status(200).send('Product deleted');
+    if (result.affectedRows === 0) return res.status(404).send({ message: 'Product not found' });
+    res.status(200).send({ message: 'Product deleted' });
   });
 });
 

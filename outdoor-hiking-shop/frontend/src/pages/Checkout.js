@@ -23,7 +23,12 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      const userId = localStorage.getItem('userId');
+      const userId = localStorage.getItem('user_id'); // retrieve user_id from localStorage
+      if (!userId) {
+        alert('Please log in before placing an order');
+        return;
+      }
+
       const total = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
       const status = 'Pending';
 
@@ -33,10 +38,9 @@ const Checkout = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: userId,
+          user_id: userId, // Include user_id in the request body
           total,
           status,
-          cartItems, // Send all cart items for order_items creation
           shipping_method_id: selectedShipping, // Include shipping method
         }),
       });
@@ -48,6 +52,23 @@ const Checkout = () => {
       const orderData = await orderResponse.json();
       const orderId = orderData.orderId;
 
+      // Send order items to the backend to create order items
+      for (const item of cartItems) {
+        await fetch('http://localhost:5000/api/order-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+          }),
+        });
+      }
+
+      // Create payment after order items are created
       await createPayment(orderId, paymentMethod, 'Pending');
 
       alert('Order placed successfully!');
